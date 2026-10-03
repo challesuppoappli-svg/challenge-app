@@ -64,6 +64,10 @@ export default function ChallengeDetailPage() {
 
   const [tasks, setTasks] = useState<any[]>([]);
 
+  const [reflection, setReflection] = useState("");
+
+  const [reflectionMessage, setReflectionMessage] = useState("");
+
   const handleGoalSubmit = async (
 
   event: FormEvent<HTMLFormElement>
@@ -201,6 +205,67 @@ const handleTaskSubmit = async (
 
 };
 
+const handleReflectionSubmit = async (
+
+  event: FormEvent<HTMLFormElement>
+
+) => {
+
+  event.preventDefault();
+
+
+
+  if (!reflection) {
+
+    setReflectionMessage(
+
+      "振り返りを入力してください。"
+
+    );
+
+    return;
+
+  }
+
+
+
+  const { error } = await supabase
+
+    .from("reflections")
+
+    .insert({
+
+      challenge_id: params.id,
+
+      content: reflection,
+
+    });
+
+
+
+  if (error) {
+
+    console.error(error);
+
+
+
+    setReflectionMessage(
+
+      `保存エラー: ${error.message}`
+
+    );
+
+    return;
+  }
+
+  setReflection("");
+
+  setReflectionMessage(
+    "振り返りを保存しました。"
+  );
+
+};
+
 
 
 
@@ -262,7 +327,7 @@ const handleTaskSubmit = async (
        .eq("challenge_id", params.id);
      if(goalsError) {
         console.error(goalsError);
-        setMessage(`goal所得エラー: $ {goalsError.message}`);
+        setMessage(`Goal所得エラー: $ {GoalsError.message}`);
         return;
      }   
         
@@ -666,7 +731,40 @@ setMessage("");
 </section>
 
 
+<section>
 
+  <h2>Reflection</h2>
+
+  <form onSubmit={handleReflectionSubmit}>
+
+    <textarea
+
+      value={reflection}
+
+      onChange={(event) =>
+
+        setReflection(event.target.value)
+
+      }
+
+      placeholder="今日どうだった？"
+
+    />
+    <button type="submit">
+
+      保存
+
+    </button>
+
+    {reflectionMessage && (
+
+      <p>{reflectionMessage}</p>
+
+    )}
+
+  </form>
+
+</section>
 
 
      <section>
