@@ -1,3 +1,19 @@
+:root {
+  --bg: #0b0f14;
+  --surface: #151a21;
+  --card: #1b212c;
+  --text: #ffffff;
+  --text-sub: #9ca3af;
+  --primary: #74ff6a;
+  --secondary: #47c7ff;
+  --danger: #ff4d4d;
+  --radius: 16px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+}
+
 @import "tailwindcss";
 
 :root {
@@ -45,4 +61,200 @@ button {
 
 section {
   margin-bottom: 2rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  font-family:
+    system-ui,
+    sans-serif;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.section-title {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: black;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+}
+
+/*Home*/
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: var(--text-sub);
+  margin-bottom: 1.5rem;
+}
+
+.challenge-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border: 1px solid #2a3140;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #29303a;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+}
+
+.task-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: var(--surface);
+  border-top: 1px solid #2a3140;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+}
+
+.bottom-nav a {
+  color: var(--text-sub);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bottom-nav a:hover {
+  color: var(--primary);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(71, 199, 255, 0.15);
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.challenge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  color: var(--text-sub);
+  font-size: 14px;
+}
+
+.challenge-list-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  border: 1px solid #2a3140;
+  cursor: pointer;
+}
+
+.challenge-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.challenge-create {
+  width: 100%;
+  background: transparent;
+  color: var(--primary);
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-weight: 600;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  text-align: center;
+}
+
+.stat-label {
+  color: var(--text-sub);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid #2a3140;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+textarea {
+  min-height: 120px;
 }

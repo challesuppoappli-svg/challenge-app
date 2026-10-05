@@ -1,321 +1,221 @@
 "use client";
 
-
-
 import { useEffect, useState } from "react";
-
 import { supabase } from "@/lib/supabase";
-
 import BottomNav from "@/app/components/BottomNav";
 
-
-
 export default function Home() {
-
-  const [email, setEmail] = useState("");
-
   const [challengeTitle, setChallengeTitle] = useState("");
-
   const [taskTitle, setTaskTitle] = useState("");
-
   const [taskId, setTaskId] = useState("");
-
   const [taskCompleted, setTaskCompleted] = useState(false);
-
   const [progress, setProgress] = useState(0);
-
-
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
     const loadData = async () => {
-
       const {
-
         data: { user },
-
+        error: userError,
       } = await supabase.auth.getUser();
 
-
-
-      if (!user) {
-
+      if (userError || !user) {
         window.location.href = "/login";
-
         return;
-
       }
 
-
-
-      setEmail(user.email ?? "");
-
-
-
-      const { data: challenge, error: challengeError } =
-
-        await supabase
-
-          .from("challenges")
-
-          .select("*")
-
-          .limit(1)
-
-          .single();
-
-
+      const {
+        data: challenge,
+        error: challengeError,
+      } = await supabase
+        .from("challenges")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
 
       if (challengeError) {
-
-        console.error(challengeError);
-
+        console.error("Challenge取得エラー:", challengeError);
       }
-
-
 
       if (challenge) {
-
         setChallengeTitle(challenge.title);
-
       }
 
-
-
-      const { data: task, error: taskError } =
-
-        await supabase
-
-          .from("tasks")
-
-          .select("*")
-
-          .limit(1)
-
-          .single();
-
-
+      const {
+        data: task,
+        error: taskError,
+      } = await supabase
+        .from("tasks")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
 
       if (taskError) {
-
-        console.error(taskError);
-
+        console.error("Task取得エラー:", taskError);
       }
-
-
 
       if (task) {
-
         setTaskTitle(task.title);
-
         setTaskId(task.id);
-
         setTaskCompleted(task.is_completed);
-
       }
 
-
-
-      const { data: tasks, error: tasksError } =
-
-        await supabase
-
-          .from("tasks")
-
-          .select("*");
-
-
+      const {
+        data: tasks,
+        error: tasksError,
+      } = await supabase
+        .from("tasks")
+        .select("*");
 
       if (tasksError) {
-
-        console.error(tasksError);
-
+        console.error("Task一覧取得エラー:", tasksError);
+        setLoading(false);
         return;
-
       }
 
-
-
-      const completed =
-
+      const completedCount =
         tasks?.filter((item) => item.is_completed).length ?? 0;
-
-
-
-      const total = tasks?.length ?? 0;
-
-
-
-      setProgress(
-
-        total === 0
-
+      const totalCount = tasks?.length ?? 0;
+      const calculatedProgress =
+        totalCount === 0
           ? 0
+          : Math.round(
+              (completedCount / totalCount) * 100
+            );
 
-          : Math.round((completed / total) * 100)
-
-      );
-
+      setProgress(calculatedProgress);
+      setLoading(false);
     };
 
-
-
     loadData();
-
   }, []);
 
-
-
   const handleCompleteTask = async () => {
+    if (!taskId || taskCompleted) {
+      return;
+    }
 
-  if (!taskId) {
+    const { error: updateError } = await supabase
+      .from("tasks")
+      .update({
+        is_completed: true,
+      })
+      .eq("id", taskId);
 
-    console.error("Task IDがありません。");
+    if (updateError) {
+      console.error("Task更新エラー:", updateError);
+      return;
+    }
 
-    return;
+    const { error: completionError } = await supabase
+      .from("task_completions")
+      .insert({
+        task_id: taskId,
+        completed_at: new Date().toISOString(),
+      });
 
-  }
+    if (completionError) {
+      console.error(
+        "完了履歴保存エラー:",
+        completionError
+      );
 
+      alert(
+        `完了履歴保存エラー: ${completionError.message}`
+      );
 
-
-  const { error: updateError } = await supabase
-
-    .from("tasks")
-
-    .update({
-
-      is_completed: true,
-
-    })
-
-    .eq("id", taskId);
-
-
-
-  if (updateError) {
-
-    console.error("Task更新エラー:", updateError);
-
-    return;
-
-  }
-
-
-
-  const { error: completionError } = await supabase
-
-    .from("task_completions")
-
-    .insert({
-
-      task_id: taskId,
-
-      completed_at: new Date().toISOString(),
-
-    });
-
-
-
-  if (completionError) {
-
-    console.error("完了履歴保存エラー:", completionError);
-
-    alert(`完了履歴保存エラー: ${completionError.message}`);
-
-    return;
-
-  }
-
-
-
-  window.location.reload();
-
-};
-
-
-
-  const handleLogout = async () => {
-
-    await supabase.auth.signOut();
-
-    window.location.href = "/login";
-
+      return;
+    }
+    window.location.reload();
   };
 
-
+  if (loading) {
+    return (
+      <main>
+        <p>読み込み中...</p>
+      </main>
+    );
+  }
 
   return (
-
     <main>
+      <p className="section-title">
+        TODAY
+      </p>
 
-      <h1>こんにちは、{email}</h1>
+      <h1 className="page-title">
+        おはようございます 👋
+      </h1>
 
+      <p className="page-subtitle">
+        現在の自分へ、一歩ずつ。
+      </p>
 
-
-      <section>
-
-        <h2>現在の挑戦</h2>
-
-        <p>{challengeTitle || "挑戦がありません"}</p>
-
-      </section>
-
-
-
-      <section>
-
-        <h2>今日のTask</h2>
-
-
-
-        <p>
-
-          {taskCompleted ? "✓ " : "□ "}
-
-          {taskTitle || "Taskがありません"}
-
+      <section className="challenge-card">
+        <p className="section-title">
+          TODAY'S CHALLENGE
         </p>
 
+        <div className="challenge-header">
+          <h2>
+            {challengeTitle || "挑戦がありません"}
+          </h2>
 
+          {challengeTitle && (
+            <span className="badge">
+              習慣
+            </span>
+          )}
+        </div>
 
-        {taskId && !taskCompleted && (
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${progress}%`,
+            }}
+          />
+        </div>
 
-          <button type="button" onClick={handleCompleteTask}>
+        <div className="progress-meta">
+          <span>進捗率</span>
+          <span>{progress}%</span>
+        </div>
+      </section>
 
-            完了にする
+      <section className="card">
+        <p className="section-title">
+          TODAY'S TASK
+        </p>
 
-          </button>
+        {taskId ? (
+          <div className="task-card">
+            <p>
+              {taskCompleted ? "✅" : "⬜"}
+              {" "}
+              {taskTitle}
+            </p>
 
+            {taskCompleted ? (
+              <p className="page-subtitle">
+                完了済みです。
+              </p>
+
+            ) : (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleCompleteTask}
+              >
+                完了にする
+              </button>
+            )}
+          </div>
+        ) : (
+          <p>今日のタスクはありません。</p>
         )}
-
-
-
-        {taskCompleted && <p>完了済みです。</p>}
-
       </section>
-
-
-
-      <section>
-
-        <h2>Progress</h2>
-
-        <p>{progress}%</p>
-
-      </section>
-
-
-
-      <button type="button" onClick={handleLogout}>
-
-        ログアウト
-
-      </button>
-
       <BottomNav />
-
     </main>
-
   );
-
 }
