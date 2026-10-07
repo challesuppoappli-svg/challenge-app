@@ -1,7 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
+
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/app/components/BottomNav";
 
@@ -16,200 +26,652 @@ type Challenge = {
   status: string;
 };
 
+
+type Goal = {
+  id: string;
+  title: string;
+  target_value: number;
+  current_value: number;
+};
+
+
+type Task = {
+  id: string;
+  goal_id: string;
+  title: string;
+  description: string | null;
+  due_date: string;
+  is_completed: boolean;
+  goals:
+    | {
+        title: string;
+        challenge_id: string;
+      }
+    | {
+        title: string;
+        challenge_id: string;
+      }[];
+};
+
+
 export default function ChallengeDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [message, setMessage] = useState("読み込み中...");
-  const [goalTitle, setGoalTitle] = useState("");
-  const [targetValue, setTargetValue] = useState("");
-  const [goalMessage, setGoalMessage] = useState("");
-  const [goals, setGoals] = useState<any[]>([]);
-  const [selectedGoalId, setSelectedGoalId] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDescription, setTaskDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [taskMessage, setTaskMessage] = useState("");
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [reflection, setReflection] = useState("");
-  const [reflectionMessage, setReflectionMessage] = useState("");
-  const handleGoalSubmit = async (
-  event: FormEvent<HTMLFormElement>
-) => {
 
-  event.preventDefault();
-  setGoalMessage("");
+  const [challenge, setChallenge] =
+    useState<Challenge | null>(null);
 
-  if (!goalTitle || !targetValue) {
-    setGoalMessage("Goalタイトルと目標値を入力してください。");
-    return;
-  }
+  const [message, setMessage] =
+    useState("読み込み中...");
 
-  const { error } = await supabase
-    .from("goals")
-    .insert({
-      challenge_id: params.id,
-      title: goalTitle,
-      target_value: Number(targetValue),
-      current_value: 0,
-    });
+  const [goals, setGoals] =
+    useState<Goal[]>([]);
 
-  if (error) {
-    console.error(error);
-    setGoalMessage(`Goal作成エラー: ${error.message}`);
-    return;
-  }
+  const [
+    selectedGoalId,
+    setSelectedGoalId,
+  ] = useState("");
 
-  setGoalTitle("");
-  setTargetValue("");
-  setGoalMessage("Goalを追加しました。");
-};
-const handleTaskSubmit = async (
-  event: FormEvent<HTMLFormElement>
-) => {
+  const [taskTitle, setTaskTitle] =
+    useState("");
 
-  event.preventDefault();
-  setTaskMessage("");
+  const [
+    taskDescription,
+    setTaskDescription,
+  ] = useState("");
 
-  if (
-    !selectedGoalId ||
-    !taskTitle ||
-    !dueDate
-  ) {
-    setTaskMessage(
-      "Goal・Taskタイトル・実施日を入力してください。"
+  const [dueDate, setDueDate] =
+    useState("");
+
+  const [taskMessage, setTaskMessage] =
+    useState("");
+
+  const [tasks, setTasks] =
+    useState<Task[]>([]);
+
+  const [reflection, setReflection] =
+    useState("");
+
+  const [
+    reflectionMessage,
+    setReflectionMessage,
+  ] = useState("");
+
+  const [
+    showTaskModal,
+    setShowTaskModal,
+  ] = useState(false);
+
+  const [
+    showReflectionModal,
+    setShowReflectionModal,
+  ] = useState(false);
+
+  const [
+    openedTaskMenu,
+    setOpenedTaskMenu,
+  ] = useState<string | null>(null);
+
+  const [
+  editingTaskId,
+  setEditingTaskId,
+] = useState<string | null>(null);
+
+const [
+  editTaskTitle,
+  setEditTaskTitle,
+] = useState("");
+
+const [
+  editTaskDescription,
+  setEditTaskDescription,
+] = useState("");
+
+const [
+  editDueDate,
+  setEditDueDate,
+] = useState("");
+
+  const fetchTasks = async () => {
+    const {
+      data: tasksData,
+      error: tasksError,
+    } = await supabase
+      .from("tasks")
+      .select(`
+        id,
+        goal_id,
+        title,
+        description,
+        due_date,
+        is_completed,
+        goals!inner (
+          title,
+          challenge_id
+        )
+      `)
+      .eq(
+        "goals.challenge_id",
+        params.id
+      )
+      .order("due_date", {
+        ascending: false,
+      });
+
+
+    if (tasksError) {
+      console.error(
+        "Task取得エラー:",
+        tasksError
+      );
+
+
+      setTaskMessage(
+        `Task取得エラー: ${tasksError.message}`
+      );
+
+
+      return;
+    }
+
+
+    setTasks(
+      (tasksData ?? []) as Task[]
     );
-    return;
-  }
+  };
 
-  const { error } = await supabase
-    .from("tasks")
-
-    .insert({
-      goal_id: selectedGoalId,
-      title: taskTitle,
-      description: taskDescription,
-      due_date: dueDate,
-      is_completed: false,
-    });
-
-  if (error) {
-    console.error(error);
-    setTaskMessage(
-      `Task作成エラー: ${error.message}`
-    );
-    return;
-  }
-
-  setTaskTitle("");
-  setTaskDescription("");
-  setDueDate("");
-  setTaskMessage(
-    "Taskを追加しました。"
- );
-};
-
-const handleReflectionSubmit = async (
-  event: FormEvent<HTMLFormElement>
-) => {
-  event.preventDefault();
-
-  if (!reflection) {
-    setReflectionMessage(
-      "振り返りを入力してください。"
-    );
-    return;
-  }
-
-  const { error } = await supabase
-    .from("reflections")
-    .insert({
-      challenge_id: params.id,
-      content: reflection,
-    });
-
-  if (error) {
-    console.error(error);
-
-    setReflectionMessage(
-      `保存エラー: ${error.message}`
-    );
-    return;
-  }
-  setReflection("");
-  setReflectionMessage(
-    "振り返りを保存しました。"
-  );
-};
 
   useEffect(() => {
     const getChallenge = async () => {
-
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
+
 
       if (userError || !user) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabase
+
+      const {
+        data,
+        error,
+      } = await supabase
         .from("challenges")
         .select(
-          "id, title, category, start_date, target_date, description, status"
+          `
+            id,
+            title,
+            category,
+            start_date,
+            target_date,
+            description,
+            status
+          `
         )
         .eq("id", params.id)
         .single();
 
+
       if (error) {
-        console.error(error);
-        setMessage(`取得エラー: ${error.message}`);
+        console.error(
+          "Challenge取得エラー:",
+          error
+        );
+
+
+        setMessage(
+          `取得エラー: ${error.message}`
+        );
+
+
         return;
       }
 
-     const{ data: goalsData, error:goalsError } = await supabase
-       .from("goals")
-       .select("*")
-       .eq("challenge_id", params.id);
-     if(goalsError) {
-        console.error(goalsError);
-        setMessage(`Goal取得エラー: ${goalsError.message}`);
-        return
-     }   
-    
-    setGoals(goalsData ?? []);
 
-const { data: tasksData, error: tasksError } = await supabase
-  .from("tasks")
-  .select(`
-    id,
-    goal_id,
-    title,
-    description,
-    due_date,
-    is_completed,
-    goals!inner (
-      title,
-      challenge_id
-    )
-  `)
-  .eq("goals.challenge_id", params.id);
+      const {
+        data: goalsData,
+        error: goalsError,
+      } = await supabase
+        .from("goals")
+        .select(
+          `
+            id,
+            title,
+            target_value,
+            current_value
+          `
+        )
+        .eq(
+          "challenge_id",
+          params.id
+        );
 
-if (tasksError) {
-  console.error(tasksError);
-  setMessage(`Task取得エラー: ${tasksError.message}`);
-  return;
-}
 
-setTasks(tasksData ?? []);
-setChallenge(data);
-setMessage("");    
+      if (goalsError) {
+        console.error(
+          "Goal取得エラー:",
+          goalsError
+        );
+
+
+        setMessage(
+          `Goal取得エラー: ${goalsError.message}`
+        );
+
+        return;
+      }
+
+
+      const loadedGoals =
+        (goalsData ?? []) as Goal[];
+
+
+      setGoals(loadedGoals);
+
+
+      if (loadedGoals.length > 0) {
+        setSelectedGoalId(
+          loadedGoals[0].id
+        );
+      }
+
+
+      setChallenge(data);
+      await fetchTasks();
+      setMessage("");
     };
 
-    getChallenge()
+
+    getChallenge();
   }, [params.id, router]);
+
+
+  const handleTaskSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    setTaskMessage("");
+
+
+    if (
+      !selectedGoalId ||
+      !taskTitle.trim() ||
+      !dueDate
+    ) {
+      setTaskMessage(
+        "Taskタイトルと実施日を入力してください。"
+      );
+
+
+      return;
+    }
+
+
+    const { error } = await supabase
+      .from("tasks")
+      .insert({
+        goal_id: selectedGoalId,
+        title: taskTitle.trim(),
+        description:
+          taskDescription.trim() ||
+          null,
+        due_date: dueDate,
+        is_completed: false,
+      });
+
+
+    if (error) {
+      console.error(
+        "Task作成エラー:",
+        error
+      );
+
+
+      setTaskMessage(
+        `Task作成エラー: ${error.message}`
+      );
+
+
+      return;
+    }
+
+
+    setTaskTitle("");
+    setTaskDescription("");
+    setDueDate("");
+    setTaskMessage(
+      "Taskを追加しました。"
+    );
+
+    setShowTaskModal(false);
+
+    await fetchTasks();
+  };
+
+  const handleToggleTask = async (
+  taskId: string
+) => {
+  const selectedTask = tasks.find(
+    (task) => task.id === taskId
+  );
+
+
+  if (!selectedTask) {
+    return;
+  }
+
+
+  const nextCompleted =
+    !selectedTask.is_completed;
+
+
+  const { error: updateError } =
+    await supabase
+      .from("tasks")
+      .update({
+        is_completed: nextCompleted,
+      })
+      .eq("id", taskId);
+
+
+  if (updateError) {
+    console.error(
+      "Task更新エラー:",
+      updateError
+    );
+
+
+    setTaskMessage(
+      `Task更新エラー: ${updateError.message}`
+    );
+
+
+    return;
+  }
+
+
+  if (nextCompleted) {
+    const { error: completionError } =
+      await supabase
+        .from("task_completions")
+        .insert({
+          task_id: taskId,
+          completed_at:
+            new Date().toISOString(),
+        });
+
+
+    if (completionError) {
+      console.error(
+        "完了履歴保存エラー:",
+        completionError
+      );
+
+
+      setTaskMessage(
+        `完了履歴保存エラー: ${completionError.message}`
+      );
+
+
+      return;
+    }
+  } else {
+    const { error: deleteError } =
+      await supabase
+        .from("task_completions")
+        .delete()
+        .eq("task_id", taskId);
+
+
+    if (deleteError) {
+      console.error(
+        "完了履歴削除エラー:",
+        deleteError
+      );
+
+      setTaskMessage(
+        `完了履歴削除エラー: ${deleteError.message}`
+      );
+
+
+      return;
+    }
+  }
+
+
+  setTasks((currentTasks) =>
+    currentTasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            is_completed: nextCompleted,
+          }
+        : task
+    )
+  );
+
+
+  setTaskMessage(
+    nextCompleted
+      ? "Taskを完了しました。"
+      : "Taskを未完了に戻しました。"
+  );
+};
+
+
+const handleDeleteTask = async (
+  taskId: string
+) => {
+  const confirmed = window.confirm(
+    "このTaskを削除しますか？"
+  );
+
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  const { error: completionDeleteError } =
+    await supabase
+      .from("task_completions")
+      .delete()
+      .eq("task_id", taskId);
+
+
+  if (completionDeleteError) {
+    console.error(
+      "完了履歴削除エラー:",
+      completionDeleteError
+    );
+
+
+    setTaskMessage(
+      `完了履歴削除エラー: ${completionDeleteError.message}`
+    );
+
+
+    return;
+  }
+
+
+  const { error: taskDeleteError } =
+    await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId);
+
+
+  if (taskDeleteError) {
+    console.error(
+      "Task削除エラー:",
+      taskDeleteError
+    );
+
+
+    setTaskMessage(
+      `Task削除エラー: ${taskDeleteError.message}`
+    );
+
+
+    return;
+  }
+
+
+  setTasks((currentTasks) =>
+    currentTasks.filter(
+      (task) => task.id !== taskId
+    )
+  );
+
+
+  setOpenedTaskMenu(null);
+  setTaskMessage(
+    "Taskを削除しました。"
+  );
+};
+
+
+const handleOpenEditTask = (
+  task: Task
+) => {
+  setEditingTaskId(task.id);
+  setEditTaskTitle(task.title);
+  setEditTaskDescription(
+    task.description ?? ""
+  );
+  setEditDueDate(task.due_date);
+  setOpenedTaskMenu(null);
+};
+
+
+const handleEditTaskSubmit = async (
+  event: FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
+
+
+  if (
+    !editingTaskId ||
+    !editTaskTitle.trim() ||
+    !editDueDate
+  ) {
+    setTaskMessage(
+      "Taskタイトルと実施日を入力してください。"
+    );
+
+
+    return;
+  }
+
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      title: editTaskTitle.trim(),
+      description:
+        editTaskDescription.trim() ||
+        null,
+      due_date: editDueDate,
+    })
+    .eq("id", editingTaskId);
+
+
+  if (error) {
+    console.error(
+      "Task編集エラー:",
+      error
+    );
+
+
+    setTaskMessage(
+      `Task編集エラー: ${error.message}`
+    );
+
+
+    return;
+  }
+
+
+  setTasks((currentTasks) =>
+    currentTasks.map((task) =>
+      task.id === editingTaskId
+        ? {
+            ...task,
+            title:
+              editTaskTitle.trim(),
+            description:
+              editTaskDescription.trim() ||
+              null,
+            due_date: editDueDate,
+          }
+        : task
+    )
+  );
+
+
+  setEditingTaskId(null);
+  setEditTaskTitle("");
+  setEditTaskDescription("");
+  setEditDueDate("");
+
+
+  setTaskMessage(
+    "Taskを編集しました。"
+  );
+};
+
+
+const handleReflectionSubmit = async (
+  event: FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
+
+
+  if (!reflection.trim()) {
+    setReflectionMessage(
+      "振り返りを入力してください。"
+    );
+
+
+    return;
+  }
+
+
+  const { error } = await supabase
+    .from("reflections")
+    .insert({
+      challenge_id: params.id,
+      content: reflection.trim(),
+    });
+
+
+  if (error) {
+    console.error(
+      "Reflection保存エラー:",
+      error
+    );
+
+
+    setReflectionMessage(
+      `保存エラー: ${error.message}`
+    );
+
+
+    return;
+  }
+
+
+  setReflection("");
+  setReflectionMessage(
+    "振り返りを保存しました。"
+  );
+  setShowReflectionModal(false);
+};
+
 
   if (message) {
     return (
@@ -219,278 +681,547 @@ setMessage("");
     );
   }
 
-  if (!challenge) {
 
+  if (!challenge) {
     return (
       <main>
-        <p>挑戦が見つかりません。</p>
+        <p>
+          Goalが見つかりません。
+        </p>
       </main>
     );
   }
 
-  return (
-    <main>
-      <p className="section-title">
-  CHALLENGE
-</p>
 
-<h1 className="page-title">
-  {challenge.title}
-</h1>
-
-<div className="challenge-card">
-  <div className="challenge-header">
-    <h2>{challenge.title}</h2>
-    <span className="badge">
-      {challenge.category}
-    </span>
-  </div>
-
-  <p className="page-subtitle">
-    {challenge.description || "説明なし"}
-  </p>
-</div>
-
-      <section className="card">
-        <p className="section-title">
-            GOALS
-        </p>
-        <h2>Goal</h2>
-        <form onSubmit={handleGoalSubmit}>
-          <div>
-            <label htmlFor="goalTitle">Goalタイトル</label>
-            <input
-              id="goalTitle"
-              type="text"
-              value={goalTitle}
-              onChange={(event) => setGoalTitle(event.target.value)}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="targetValue">目標値</label>
-            <input
-              id="targetValue"
-              type="number"
-              value={targetValue}
-              onChange={(event) => setTargetValue(event.target.value)}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary">
-            Goalを追加
-          </button>
-          {goalMessage && (
-            <p>{goalMessage}</p>
-          )}
-          <ul>
-            {goals.map((goal) => (
-                <li key={goal.id}>
-                    {goal.title}
-                    (目標値: {goal.target_value})
-                </li>
-            ))}
-          </ul>
-        </form>
-      </section>
-
-      <section className="card">
-        <p className="section-title">
-            TASKS
-        </p>
-  <h2>Task</h2>
-  <form onSubmit={handleTaskSubmit}>
-    <div>
-      <label>Goal選択</label>
-      <select
-        value={selectedGoalId}
-        onChange={(e) =>
-          setSelectedGoalId(e.target.value)
-        }
-      >
-        <option value="">
-          Goalを選択
-        </option>
-
-        {goals.map((goal) => (
-          <option
-            key={goal.id}
-            value={goal.id}
-          >
-            {goal.title}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    <div>
-      <label>Taskタイトル</label>
-      <input
-        type="text"
-        value={taskTitle}
-        onChange={(e) =>
-          setTaskTitle(e.target.value)
-        }
-      />
-    </div>
-
-    <div>
-      <label>説明</label>
-      <textarea
-        value={taskDescription}
-        onChange={(e) =>
-          setTaskDescription(
-            e.target.value
-          )
-        }
-      />
-    </div>
-
-    <div>
-      <label>実施日</label>
-      <input
-        type="date"
-        value={dueDate}
-        onChange={(e) =>
-          setDueDate(e.target.value)
-        }
-      />
-    </div>
-
-    <button type="submit"　className="btn-primary">
-      Taskを追加
-    </button>
-
-    {taskMessage && (
-      <p>{taskMessage}</p>
-    )}
-  </form>
-
-  <ul>
-  {tasks.map((task) => (
-    <li key={task.id}>
-      <strong>{task.title}</strong>
-
-      <div>
-        Goal：
-        {Array.isArray(task.goals)
-          ? task.goals[0]?.title
-          : task.goals?.title}
-      </div>
-
-      <div>
-        説明：{task.description || "なし"}
-      </div>
-
-      <div>
-        実施日：{task.due_date}
-      </div>
-
-      <div>
-        状態：
-        {task.is_completed
-          ? "完了"
-          : "未完了"}
-      </div>
-    </li>
-  ))}
-</ul>
-
-</section>
-
-<section className="card">
-    <p className="section-title">
-        REFLECTION
-    </p>
-  <h2>Reflection</h2>
-  <form onSubmit={handleReflectionSubmit}>
-    <textarea
-      value={reflection}
-      onChange={(event) =>
-        setReflection(event.target.value)
-      }
-      placeholder="今日どうだった？"
-    />
-    <button type="submit">
-      保存
-    </button>
-
-    {reflectionMessage && (
-      <p>{reflectionMessage}</p>
-    )}
-  </form>
-</section>
+  const completedTaskCount =
+    tasks.filter(
+      (task) => task.is_completed
+    ).length;
 
 
-  <section className="card">
-  <p className="section-title">
-    PROGRESS
-  </p>
-
-  <div className="progress-bar">
-    <div
-      className="progress-fill"
-      style={{
-        width: `${
-          tasks.length === 0
-            ? 0
-            : Math.round(
-                (
-                  tasks.filter(
-                    (task) =>
-                      task.is_completed
-                  ).length /
-                  tasks.length
-                ) * 100
-              )
-        }%`,
-      }}
-    />
-  </div>
-
-  <div className="progress-meta">
-    <span>達成率</span>
-
-    <span>
-      {tasks.length === 0
-        ? 0
-        : Math.round(
-            (
-              tasks.filter(
-                (task) =>
-                  task.is_completed
-              ).length /
-              tasks.length
-            ) * 100
-          )}
-      %
-    </span>
-  </div>
-</section>
-
-  <p>
-    Goal数: {goals.length}
-  </p>
-
-  <p>
-    Task数: {tasks.length}
-  </p>
-
-  <p>
-    完了率:
-    {" "}
-    {tasks.length === 0
+  const progress =
+    tasks.length === 0
       ? 0
       : Math.round(
-          (tasks.filter(
-            (task) => task.is_completed
-          ).length /
+          (completedTaskCount /
             tasks.length) *
             100
+        );
+
+
+  const remainingDays =
+    challenge.target_date
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(
+              `${challenge.target_date}T00:00:00`
+            ).getTime() -
+              Date.now()) /
+              (1000 *
+                60 *
+                60 *
+                24)
+          )
+        )
+      : 0;
+
+
+  return (
+    <main>
+      <div className="detail-title-row">
+        <button
+          type="button"
+          className="back-button"
+          aria-label="Goal一覧へ戻る"
+          onClick={() =>
+            router.push(
+              "/challenges"
+            )
+          }
+        >
+          ←
+        </button>
+
+
+        <div>
+          <h1 className="page-title">
+            {challenge.title}
+          </h1>
+
+
+          <div className="detail-badges">
+            <span className="badge">
+              {challenge.category}
+            </span>
+
+
+            <span className="badge">
+              残り{remainingDays}日
+            </span>
+          </div>
+        </div>
+      </div>
+
+
+      <section className="card">
+        <p className="section-title">
+          目標
+        </p>
+
+
+        <h2>
+          {challenge.description ||
+            "説明なし"}
+        </h2>
+      </section>
+
+
+      <section className="card">
+        <div className="progress-header">
+          <p className="section-title">
+            PROGRESS
+          </p>
+
+
+          <h2 className="progress-percent">
+            {progress}%
+          </h2>
+        </div>
+
+
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${progress}%`,
+            }}
+          />
+        </div>
+
+
+        <div className="progress-stats">
+          <div>
+            <p className="stat-label">
+              完了タスク
+            </p>
+
+
+            <p className="stat-value-small">
+              {completedTaskCount}/
+              {tasks.length}
+            </p>
+          </div>
+
+
+          <div>
+            <p className="stat-label">
+              連続日数
+            </p>
+
+
+            <p className="stat-value-small">
+              0日
+            </p>
+          </div>
+        </div>
+      </section>
+
+
+      <section className="card">
+        <p className="section-title">
+          TODAY'S TASKS
+        </p>
+
+
+        {taskMessage && (
+          <p>{taskMessage}</p>
         )}
-    %
-  </p>
-  <BottomNav />
-</main> 
+
+
+        <div className="goal-task-list">
+          {tasks.length === 0 ? (
+            <p className="page-subtitle">
+              Taskはまだありません。
+            </p>
+          ) : (
+            tasks.map((task) => (
+              <div
+                key={task.id}
+                className={`goal-task-row ${
+                  task.is_completed
+                    ? "goal-task-row-completed"
+                    : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  className="goal-task-check"
+                  aria-label={
+                    task.is_completed
+                      ? "未完了に戻す"
+                      : "完了にする"
+                  }
+                  onClick={() =>
+                    handleToggleTask(
+                      task.id
+                    )
+                  }
+                >
+                  {task.is_completed
+                    ? "✓"
+                    : ""}
+                </button>
+
+
+                <span className="goal-task-content">
+                  <strong
+                    className={
+                      task.is_completed
+                        ? "goal-task-title-completed"
+                        : ""
+                    }
+                  >
+                    {task.title}
+                  </strong>
+
+
+                  <small>
+                    {task.due_date}
+                  </small>
+                </span>
+
+
+                <div className="task-menu-wrapper">
+                  <button
+                    type="button"
+                    className="task-menu-button"
+                    aria-label="Taskメニュー"
+                    onClick={() =>
+                      setOpenedTaskMenu(
+                        openedTaskMenu ===
+                          task.id
+                          ? null
+                          : task.id
+                      )
+                    }
+                  >
+                    ⋮
+                  </button>
+
+
+                  {openedTaskMenu ===
+                    task.id && (
+                    <div className="task-menu">
+                      <button
+                        type="button"
+                        onClick={() => 
+                         handleOpenEditTask(task)
+
+                        }
+                      >
+                        編集
+                      </button>
+
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenedTaskMenu(
+                            null
+                          );
+                          handleDeleteTask(task.id);
+
+                        }}
+                      >
+                        削除
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+
+      <button
+        type="button"
+        className="fab-reflection"
+        aria-label="振り返りを入力"
+        onClick={() =>
+          setShowReflectionModal(true)
+        }
+      >
+        📄
+      </button>
+
+
+      <button
+        type="button"
+        className="fab-task"
+        aria-label="Taskを追加"
+        onClick={() =>
+          setShowTaskModal(true)
+        }
+      >
+        +
+      </button>
+
+
+      {showTaskModal && (
+        <div
+          className="modal-overlay"
+          onClick={() =>
+            setShowTaskModal(false)
+          }
+        >
+          <div
+            className="modal-content"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <h2>Task追加</h2>
+
+
+            <form
+              onSubmit={
+                handleTaskSubmit
+              }
+            >
+              <div>
+                <label>
+                  Taskタイトル
+                </label>
+
+
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(event) =>
+                    setTaskTitle(
+                      event.target.value
+                    )
+                  }
+                />
+              </div>
+
+
+              <div>
+                <label>説明</label>
+
+
+                <textarea
+                  value={
+                    taskDescription
+                  }
+                  onChange={(event) =>
+                    setTaskDescription(
+                      event.target.value
+                    )
+                  }
+                />
+              </div>
+
+
+              <div>
+                <label>実施日</label>
+
+
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) =>
+                    setDueDate(
+                      event.target.value
+                    )
+                  }
+                />
+              </div>
+
+
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                保存
+              </button>
+            </form>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowTaskModal(false)
+              }
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {showReflectionModal && (
+        <div
+          className="modal-overlay"
+          onClick={() =>
+            setShowReflectionModal(
+              false
+            )
+          }
+        >
+          <div
+            className="modal-content"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <h2>振り返り</h2>
+
+
+            <form
+              onSubmit={
+                handleReflectionSubmit
+              }
+            >
+              <textarea
+                value={reflection}
+                onChange={(event) =>
+                  setReflection(
+                    event.target.value
+                  )
+                }
+                placeholder="今日どうだった？"
+              />
+
+
+              {reflectionMessage && (
+                <p>
+                  {reflectionMessage}
+                </p>
+              )}
+
+
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                保存
+              </button>
+            </form>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowReflectionModal(
+                  false
+                )
+              }
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
+
+{editingTaskId && (
+  <div
+    className="modal-overlay"
+    onClick={() =>
+      setEditingTaskId(null)
+    }
+  >
+    <div
+      className="modal-content"
+      onClick={(event) =>
+        event.stopPropagation()
+      }
+    >
+      <h2>Task編集</h2>
+
+
+      <form
+        onSubmit={
+          handleEditTaskSubmit
+        }
+      >
+        <div>
+          <label>
+            Taskタイトル
+          </label>
+
+
+          <input
+            type="text"
+            value={editTaskTitle}
+            onChange={(event) =>
+              setEditTaskTitle(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+
+        <div>
+          <label>説明</label>
+
+
+          <textarea
+            value={
+              editTaskDescription
+            }
+            onChange={(event) =>
+              setEditTaskDescription(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+
+        <div>
+          <label>実施日</label>
+
+
+          <input
+            type="date"
+            value={editDueDate}
+            onChange={(event) =>
+              setEditDueDate(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+
+        <button
+          type="submit"
+          className="btn-primary"
+        >
+          変更を保存
+        </button>
+      </form>
+
+
+      <button
+        type="button"
+        onClick={() =>
+          setEditingTaskId(null)
+        }
+      >
+        キャンセル
+      </button>
+    </div>
+  </div>
+)}
+
+      <BottomNav />
+    </main>
   );
 }

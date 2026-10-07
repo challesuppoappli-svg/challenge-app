@@ -258,3 +258,271 @@ select {
 textarea {
   min-height: 120px;
 }
+
+.task-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid #2a3140;
+  border-radius: 12px;
+  padding: var(--space-md);
+  margin-top: var(--space-sm);
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.task-card:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.goal-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.goal-task-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid #2a3140;
+  border-radius: 14px;
+  padding: var(--space-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.goal-task-row:hover {
+  border-color: var(--primary);
+}
+
+.goal-task-row-completed {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.goal-task-check {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  color: #101410;
+  background: transparent;
+  font-weight: 700;
+}
+
+.goal-task-row-completed
+.goal-task-check {
+  background: var(--primary);
+}
+
+.goal-task-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.goal-task-content small {
+  color: var(--text-sub);
+}
+
+.goal-task-title-completed {
+  text-decoration: line-through;
+}
+
+.challenge-list-card {
+  width: 100%;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+}
+
+.challenge-list-card:hover {
+border-color: var(--primary);
+}
+
+.back-button {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+
+.back-button:hover {
+  opacity: 0.8;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.detail-title-row .page-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-button {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.detaile-badges {
+  display: flex;
+  gap: 8px;
+  margin-left: 54px;
+  margin-bottom: 24px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-percent {
+  color: var(--primary);
+  margin: 0;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.stat-value-small {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.fab-task {
+  position: fixed;
+  right: 24px;
+  bottom: 96px;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: black;
+  font-size: 32px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  z-index: 1000;
+}
+
+.fab-reflection {
+  position: fixed;
+  left: 24px;
+  bottom: 96px;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  border: 1px solid #2a3140;
+  z-index: 1000;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 420px;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.task-menu-wrapper {
+  position: relative;
+  margin-left: auto;
+}
+
+.task-menu-button {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.task-menu {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background: var(--card);
+  border: 1px solid #2a3140;
+  border-radius: 12px;
+  min-width: 120px;
+  overflow: hidden;
+  z-index: 2000;
+}
+
+.task-menu button {
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-menu button:hover {
+  background: rgba(255,255,255,.05);
+}
