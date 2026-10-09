@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/app/components/BottomNav";
+import { categoryLabels } from "@/lib/categoryLabels";
 
 
 type Challenge = {
@@ -53,7 +54,7 @@ export default function Home() {
       .from("challenges")
       .select("id, title, category,created_at")
       .eq("user_id", user.id)
-      .eq("status", "active")
+     // .eq("status", "active")
       .order("created_at", {
         ascending: false,
       })
@@ -96,16 +97,11 @@ export default function Home() {
         id,
         title,
         due_date,
-        is_completed,
-        goals!inner (
-          challenge_id
-        )
+        is_completed
+       
       `)
       .eq("due_date", today)
-      .eq(
-        "goals.challenge_id",
-        challengeData.id
-      )
+     // .eq( "goals.challenge_id", challengeData.id)
       .order("is_completed", {
         ascending: true,
       });
@@ -282,7 +278,8 @@ export default function Home() {
 
           {challenge && (
             <span className="badge">
-              {challenge.category}
+              {categoryLabels[challenge.category] ??
+              challenge.category}
             </span>
           )}
         </div>

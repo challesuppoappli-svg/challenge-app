@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+import { categoryLabels } from "@/lib/categoryLabels";
 
 
 export default function NewChallengePage() {

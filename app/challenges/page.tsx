@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/app/components/BottomNav";
+import { categoryLabels } from "@/lib/categoryLabels";
 
 type TaskData = {
   id: string;
@@ -205,7 +206,11 @@ export default function ChallengesPage() {
                 <h2>{goal.title}</h2>
 
                 <span className="badge">
-                  {goal.category}
+                  {
+                  categoryLabels [
+                    goal.category
+                  ] ?? goal.category 
+                }
                 </span>
               </div>
 

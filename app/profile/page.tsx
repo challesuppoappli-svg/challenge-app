@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/app/components/BottomNav"
+import { categoryLabels } from "@/lib/categoryLabels";
 
 
 export default function ProfilePage() {

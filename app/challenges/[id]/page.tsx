@@ -1,19 +1,11 @@
 "use client";
 
 
-import {
-  FormEvent,
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  useParams,
-  useRouter,
-} from "next/navigation";
-
+import { FormEvent,useEffect,useState, } from "react";
+import { useParams,useRouter, } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/app/components/BottomNav";
+import { categoryLabels } from "@/lib/categoryLabels";
 
 
 type Challenge = {
@@ -265,23 +257,62 @@ const [
       }
 
 
-      const loadedGoals =
-        (goalsData ?? []) as Goal[];
+     let loadedGoals =
+
+  (goalsData ?? []) as Goal[];
 
 
-      setGoals(loadedGoals);
+if (loadedGoals.length === 0) {
+  const {
+    data: createdGoal,
+    error: createGoalError,
+  } = await supabase
+    .from("goals")
+    .insert({
+      challenge_id: params.id,
+      title: data.title,
+      target_value: 100,
+      current_value: 0,
+    })
+    .select(
+      `
+        id,
+        title,
+        target_value,
+        current_value
+      `
+    )
+    .single();
+  if (createGoalError) {
+    console.error(
+      "内部Goal作成エラー:",
+      createGoalError
+    );
+    setMessage(
+      `内部Goal作成エラー: ${createGoalError.message}`
+    );
+    return;
+  }
 
+  loadedGoals = [
+    createdGoal as Goal,
+  ];
+}
 
-      if (loadedGoals.length > 0) {
-        setSelectedGoalId(
-          loadedGoals[0].id
-        );
-      }
+setGoals(loadedGoals);
+setSelectedGoalId(
+  loadedGoals[0].id
+);
 
 
       setChallenge(data);
       await fetchTasks();
       setMessage("");
+
+      console.log("selectedGoalId",selectedGoalId);
+      console.log("goals",goals);
+      console.log("taskTitle",taskTitle);
+      console.log("dueDate",dueDate);
     };
 
 
@@ -295,17 +326,24 @@ const [
     event.preventDefault();
     setTaskMessage("");
 
+    const goalId =selectedGoalId ||
+    goals[0]?.id;
+
+    if (!goalId) {
+        setTaskMessage(
+            "Taskの追加先となるGoalがありません。"
+        );
+        return;
+    }
 
     if (
-      !selectedGoalId ||
+      !goalId ||
       !taskTitle.trim() ||
       !dueDate
     ) {
       setTaskMessage(
         "Taskタイトルと実施日を入力してください。"
       );
-
-
       return;
     }
 
@@ -313,7 +351,7 @@ const [
     const { error } = await supabase
       .from("tasks")
       .insert({
-        goal_id: selectedGoalId,
+        goal_id: goalId,
         title: taskTitle.trim(),
         description:
           taskDescription.trim() ||
@@ -752,7 +790,9 @@ const handleReflectionSubmit = async (
 
           <div className="detail-badges">
             <span className="badge">
-              {challenge.category}
+              { categoryLabels[challenge.category
+              ] ??challenge.category
+              }
             </span>
 
 
@@ -834,9 +874,7 @@ const handleReflectionSubmit = async (
         </p>
 
 
-        {taskMessage && (
-          <p>{taskMessage}</p>
-        )}
+        
 
 
         <div className="goal-task-list">
@@ -1041,11 +1079,13 @@ const handleReflectionSubmit = async (
                 />
               </div>
 
+             {taskMessage && (
+                <p>{taskMessage}</p>
+              )}
 
               <button
                 type="submit"
-                className="btn-primary"
-              >
+                className="btn-primary">
                 保存
               </button>
             </form>
