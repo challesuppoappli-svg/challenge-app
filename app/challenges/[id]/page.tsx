@@ -50,82 +50,31 @@ export default function ChallengeDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [challenge, setChallenge] =
-    useState<Challenge | null>(null);
-
-  const [message, setMessage] =
-    useState("読み込み中...");
-
-  const [goals, setGoals] =
-    useState<Goal[]>([]);
-
-  const [
-    selectedGoalId,
-    setSelectedGoalId,
-  ] = useState("");
-
-  const [taskTitle, setTaskTitle] =
-    useState("");
-
-  const [
-    taskDescription,
-    setTaskDescription,
-  ] = useState("");
-
-  const [dueDate, setDueDate] =
-    useState("");
-
-  const [taskMessage, setTaskMessage] =
-    useState("");
-
-  const [tasks, setTasks] =
-    useState<Task[]>([]);
-
-  const [reflection, setReflection] =
-    useState("");
-
-  const [
-    reflectionMessage,
-    setReflectionMessage,
-  ] = useState("");
-
-  const [
-    showTaskModal,
-    setShowTaskModal,
-  ] = useState(false);
-
-  const [
-    showReflectionModal,
-    setShowReflectionModal,
-  ] = useState(false);
-
-  const [
-    openedTaskMenu,
-    setOpenedTaskMenu,
-  ] = useState<string | null>(null);
-
-  const [
-  editingTaskId,
-  setEditingTaskId,
-] = useState<string | null>(null);
-
-const [
-  editTaskTitle,
-  setEditTaskTitle,
-] = useState("");
-
-const [
-  editTaskDescription,
-  setEditTaskDescription,
-] = useState("");
-
-const [
-  editDueDate,
-  setEditDueDate,
-] = useState("");
-
+  const [ challenge, setChallenge] = useState<Challenge | null>(null);
+  const [ message, setMessage] = useState("読み込み中...");
+  const [ goals, setGoals] = useState<Goal[]>([]);
+  const [ selectedGoalId, setSelectedGoalId, ] = useState("");
+  const [ taskTitle, setTaskTitle] = useState("");
+  const [ taskDescription, setTaskDescription, ] = useState("");
+  const [ dueDate, setDueDate] = useState("");
+  const [ taskMessage, setTaskMessage] = useState("");
+  const [ tasks, setTasks] = useState<Task[]>([]);
+  const [ reflection, setReflection] = useState("");
+  const [ reflectionMessage, setReflectionMessage,] = useState("")
+  const [ showTaskModal, setShowTaskModal,] = useState(false);
+  const [ showReflectionModal, setShowReflectionModal, ] = useState(false);
+  const [ openedTaskMenu, setOpenedTaskMenu, ] = useState<string | null>(null);
+  const [ editingTaskId, setEditingTaskId,] = useState<string | null>(null);
+  const [ editTaskTitle, setEditTaskTitle,] = useState("");
+  const [ editTaskDescription, setEditTaskDescription,] = useState("");
+  const [ editDueDate, setEditDueDate,] = useState("");
+  const [ showCompletedTasks, setShowCompletedTasks,] = useState(false);
+  const [ openedGoalMenu, setOpenedGoalMenu,] = useState(false);
+  const [ showGoalEditModal, setShowGoalEditModal,] = useState(false);
+  const [ editGoalTitle, setEditGoalTitle,] = useState("");
+  const [ editGoalDescription, setEditGoalDescription,] = useState("");
   const fetchTasks = async () => {
-    const {
+  const {
       data: tasksData,
       error: tasksError,
     } = await supabase
@@ -161,7 +110,6 @@ const [
       setTaskMessage(
         `Task取得エラー: ${tasksError.message}`
       );
-
 
       return;
     }
@@ -662,6 +610,76 @@ const handleEditTaskSubmit = async (
   );
 };
 
+const handleOpenGoalEdit = () =>{
+    setEditGoalTitle(
+        challenge?.title ?? ""
+    );
+setEditGoalDescription(
+    challenge?.description ?? ""
+);
+setShowGoalEditModal(true);
+}
+const handleUpdateGoal = async (
+  event: FormEvent<HTMLFormElement>
+) => {
+  event.preventDefault();
+
+  if (!challenge) {
+    return;
+  }
+
+  const { error } =
+    await supabase
+      .from("challenges")
+      .update({
+        title:
+          editGoalTitle.trim(),
+        description:
+          editGoalDescription.trim() ||
+          null,
+      })
+      .eq(
+        "id",
+        challenge.id
+      );
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setChallenge({
+    ...challenge,
+    title:
+      editGoalTitle.trim(),
+    description:
+      editGoalDescription.trim() ||
+      null,
+  });
+
+  setShowGoalEditModal(false);
+};
+const handleDeleteGoal = async () => {
+    if (!challenge) {
+        return;
+    }
+    const confirmed =window.confirm(
+        "このGoalを削除しますか？"
+    );
+    if (!confirmed) {
+        return;
+    }
+    const { error } = await supabase
+    .from("challenges")
+    .delete()
+    .eq("id", challenge.id);
+    if ( error ) {
+        alert(error.message);
+        return;
+    }
+    router.push("/challenges");
+};
+
 
 const handleReflectionSubmit = async (
   event: FormEvent<HTMLFormElement>
@@ -764,9 +782,21 @@ const handleReflectionSubmit = async (
         )
       : 0;
 
+    const incompleteTasks = tasks.filter(
+        (task) => !task.is_completed
+    );
+    const completedTasks = tasks.filter(
+        (task) => task.is_completed
+    );
+
 
   return (
-    <main>
+    <main
+        onClick={() => {
+            setOpenedTaskMenu(null);
+            setOpenedGoalMenu(false);
+        }}
+        >
       <div className="detail-title-row">
         <button
           type="button"
@@ -776,32 +806,75 @@ const handleReflectionSubmit = async (
             router.push(
               "/challenges"
             )
-          }
+        }
         >
           ←
         </button>
 
 
-        <div>
-          <h1 className="page-title">
-            {challenge.title}
-          </h1>
+       <div className="goal-title-wrapper">
+  <div className="goal-title-header">
+    <h1 className="page-title">
+      {challenge.title}
+    </h1>
+  </div>
 
+  <div className="detail-badges">
+    <span className="badge">
+      {categoryLabels[challenge.category] ??
+        challenge.category}
+    </span>
 
-          <div className="detail-badges">
-            <span className="badge">
-              { categoryLabels[challenge.category
-              ] ??challenge.category
-              }
-            </span>
+    <span className="badge">
+      残り{remainingDays}日
+    </span>
 
+    <div
+      className="task-menu-wrapper"
+      onClick={(event) =>
+        event.stopPropagation()
+      }
+    >
+      <button
+        type="button"
+        className="task-menu-button"
+        aria-label="Goalメニュー"
+        onClick={() =>
+          setOpenedGoalMenu(
+            !openedGoalMenu
+          )
+        }
+      >
+        ⋮
+      </button>
 
-            <span className="badge">
-              残り{remainingDays}日
-            </span>
-          </div>
+      {openedGoalMenu && (
+        <div className="task-menu">
+          <button
+            type="button"
+            onClick={() => {
+              setOpenedGoalMenu(false);
+              handleOpenGoalEdit();
+            }}
+          >
+            編集
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpenedGoalMenu(false);
+              handleDeleteGoal();
+            }}
+          >
+            削除
+          </button>
         </div>
+      )}
       </div>
+    </div>
+  </div>
+</div>
 
 
       <section className="card">
@@ -868,120 +941,184 @@ const handleReflectionSubmit = async (
       </section>
 
 
-      <section className="card">
-        <p className="section-title">
-          TODAY'S TASKS
-        </p>
+   <section className="card">
+  <p className="section-title">
+    TODAY'S TASKS
+  </p>
 
+  <div className="goal-task-list">
+    {tasks.length === 0 ? (
+      <p className="page-subtitle">
+        Taskはまだありません。
+      </p>
+    ) : (
+      <>
+        <h3>未完了タスク</h3>
 
-        
+        {incompleteTasks.length === 0 ? (
+          <p className="page-subtitle">
+            未完了タスクはありません。
+          </p>
+        ) : (
+          incompleteTasks.map((task) => (
+            <div
+              key={task.id}
+              className="goal-task-row"
+            >
+              <button
+                type="button"
+                className="goal-task-check"
+                aria-label="完了にする"
+                onClick={() =>
+                  handleToggleTask(task.id)
+                }
+              />
 
+              <span className="goal-task-content">
+                <strong>{task.title}</strong>
 
-        <div className="goal-task-list">
-          {tasks.length === 0 ? (
-            <p className="page-subtitle">
-              Taskはまだありません。
-            </p>
-          ) : (
-            tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`goal-task-row ${
-                  task.is_completed
-                    ? "goal-task-row-completed"
-                    : ""
-                }`}
-              >
+                <small>{task.due_date}</small>
+              </span>
+
+              <div className="task-menu-wrapper">
                 <button
                   type="button"
-                  className="goal-task-check"
-                  aria-label={
-                    task.is_completed
-                      ? "未完了に戻す"
-                      : "完了にする"
-                  }
+                  className="task-menu-button"
+                  aria-label="Taskメニュー"
                   onClick={() =>
-                    handleToggleTask(
-                      task.id
+                    setOpenedTaskMenu(
+                      openedTaskMenu === task.id
+                        ? null
+                        : task.id
                     )
                   }
                 >
-                  {task.is_completed
-                    ? "✓"
-                    : ""}
+                  ⋮
                 </button>
 
+                {openedTaskMenu === task.id && (
+                  <div className="task-menu">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleOpenEditTask(task)
+                      }
+                    >
+                      編集
+                    </button>
 
-                <span className="goal-task-content">
-                  <strong
-                    className={
-                      task.is_completed
-                        ? "goal-task-title-completed"
-                        : ""
-                    }
-                  >
-                    {task.title}
-                  </strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenedTaskMenu(null);
+                        handleDeleteTask(task.id);
+                      }}
+                    >
+                      削除
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
 
+        <button
+          type="button"
+          className="completed-toggle"
+          onClick={() =>
+            setShowCompletedTasks(
+              !showCompletedTasks
+            )
+          }
+        >
+          達成済みタスク
+          {showCompletedTasks ? " ▲" : " ▼"}
+        </button>
 
-                  <small>
-                    {task.due_date}
-                  </small>
-                </span>
-
-
-                <div className="task-menu-wrapper">
+        {showCompletedTasks && (
+          <div className="completed-task-list">
+            {completedTasks.length === 0 ? (
+              <p className="page-subtitle">
+                達成済みタスクはありません。
+              </p>
+            ) : (
+              completedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="goal-task-row goal-task-row-completed"
+                >
                   <button
                     type="button"
-                    className="task-menu-button"
-                    aria-label="Taskメニュー"
+                    className="goal-task-check"
+                    aria-label="未完了に戻す"
                     onClick={() =>
-                      setOpenedTaskMenu(
-                        openedTaskMenu ===
-                          task.id
-                          ? null
-                          : task.id
-                      )
+                      handleToggleTask(task.id)
                     }
                   >
-                    ⋮
+                    ✓
                   </button>
 
+                  <span className="goal-task-content">
+                    <strong> 
+                         {task.title}
+                    </strong>
 
-                  {openedTaskMenu ===
-                    task.id && (
-                    <div className="task-menu">
-                      <button
-                        type="button"
-                        onClick={() => 
-                         handleOpenEditTask(task)
+                    <small>{task.due_date}</small>
+                  </span>
 
-                        }
-                      >
-                        編集
-                      </button>
+                  <div className="task-menu-wrapper"
+                       onClick={(event) => 
+                        event.stopPropagation()
+                       }
+                        >
+                    <button
+                      type="button"
+                      className="task-menu-button"
+                      aria-label="Taskメニュー"
+                      onClick={() =>
+                        setOpenedTaskMenu(
+                          openedTaskMenu === task.id
+                            ? null
+                            : task.id
+                        )
+                      }
+                    >
+                      ⋮
+                    </button>
 
+                    {openedTaskMenu === task.id && (
+                      <div className="task-menu">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenEditTask(task)
+                          }
+                        >
+                          編集
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenedTaskMenu(
-                            null
-                          );
-                          handleDeleteTask(task.id);
-
-                        }}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenedTaskMenu(null);
+                            handleDeleteTask(task.id);
+                          }}
+                        >
+                          削除
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
+              ))
+            )}
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</section>
 
 
       <button
@@ -1253,6 +1390,73 @@ const handleReflectionSubmit = async (
         type="button"
         onClick={() =>
           setEditingTaskId(null)
+        }
+      >
+        キャンセル
+      </button>
+    </div>
+  </div>
+)}
+
+{showGoalEditModal && (
+  <div
+    className="modal-overlay"
+    onClick={() =>
+      setShowGoalEditModal(false)
+    }
+  >
+    <div
+      className="modal-content"
+      onClick={(event) =>
+        event.stopPropagation()
+      }
+    >
+      <h2>Goal編集</h2>
+
+      <form
+        onSubmit={handleUpdateGoal}
+      >
+        <div>
+          <label>
+            Goalタイトル
+          </label>
+
+          <input
+            type="text"
+            value={editGoalTitle}
+            onChange={(event) =>
+              setEditGoalTitle(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+        <div>
+          <label>説明</label>
+
+          <textarea
+            value={editGoalDescription}
+            onChange={(event) =>
+              setEditGoalDescription(
+                event.target.value
+              )
+            }
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="btn-primary"
+        >
+          保存
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() =>
+          setShowGoalEditModal(false)
         }
       >
         キャンセル

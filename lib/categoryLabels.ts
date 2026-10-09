@@ -1,9 +1,10 @@
 export const categoryLabels:
 Record<string, string> = {
-    exam: "資格",
-    study: "勉強",
-    fitness: "運動",
+    exam: "試験",
+    sports: "スポーツ",
     work: "仕事",
-    reading: "読書",
+    habit:"趣味",
+    qualification:"資格",
     business: "ビジネス",
+    other:"その他",
 };

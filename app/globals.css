@@ -38,6 +38,7 @@
 main {
   max-width: 100%;
   padding: 1rem;
+  padding-bottom: 30%;
   overflow-x: hidden;
 }
 
@@ -525,4 +526,19 @@ border-color: var(--primary);
 
 .task-menu button:hover {
   background: rgba(255,255,255,.05);
+}
+
+.detail-badges {
+ width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-badges .task-menu-wrapper {
+  margin-left: auto;
+}
+
+.goal-title-wrapper {
+  width: 100%;
 }
