@@ -1,93 +1,142 @@
 "use client";
 
-
-
-import { useState } from "react";
-
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-
-
 export default function SignupPage() {
+  const router = useRouter();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] =
+    useState("");
 
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
 
+  const [
+    passwordConfirmation,
+    setPasswordConfirmation,
+  ] = useState("");
 
+  const [loading, setLoading] =
+    useState(false);
 
-  const handleSignup = async () => {
+  const [message, setMessage] =
+    useState("");
 
-    const { error } = await supabase.auth.signUp({
+  const handleSignup = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
 
-      email,
-
-      password,
-
-    });
-
-
-
-    if (error) {
-
-      alert(error.message);
-
+    if (
+      password !==
+      passwordConfirmation
+    ) {
+      setMessage(
+        "パスワードが一致しません"
+      );
       return;
-
     }
 
+    setLoading(true);
 
+    const { error } =
+      await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    alert("確認メールを送信しました");
+    setLoading(false);
 
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setMessage(
+      "確認メールを送信しました"
+    );
   };
 
-
-
   return (
+    <main className="auth-page">
+      <div className="auth-container">
+        <p className="section-title">
+          SIGN UP
+        </p>
 
-    <main>
+        <h1 className="auth-title">
+          アカウント作成
+        </h1>
 
-      <h1>新規登録</h1>
+        <form
+          className="auth-form"
+          onSubmit={handleSignup}
+        >
+          <input
+            type="email"
+            placeholder="メールアドレス"
+            value={email}
+            onChange={(event) =>
+              setEmail(
+                event.target.value
+              )
+            }
+          />
 
+          <input
+            type="password"
+            placeholder="パスワード"
+            value={password}
+            onChange={(event) =>
+              setPassword(
+                event.target.value
+              )
+            }
+          />
 
+          <input
+            type="password"
+            placeholder="パスワード確認"
+            value={
+              passwordConfirmation
+            }
+            onChange={(event) =>
+              setPasswordConfirmation(
+                event.target.value
+              )
+            }
+          />
 
-      <input
+          {message && (
+            <p>{message}</p>
+          )}
 
-        type="email"
+          <button
+            type="submit"
+            className="btn-primary"
+          >
+            {loading
+              ? "作成中..."
+              : "アカウントを作成"}
+          </button>
+        </form>
 
-        placeholder="メールアドレス"
+        <p className="auth-footer">
+          すでにアカウントをお持ちの方は
+        </p>
 
-        value={email}
-
-        onChange={(e) => setEmail(e.target.value)}
-
-      />
-
-
-
-      <input
-
-        type="password"
-
-        placeholder="パスワード"
-
-        value={password}
-
-        onChange={(e) => setPassword(e.target.value)}
-
-      />
-
-
-
-      <button onClick={handleSignup}>
-
-        新規登録
-
-      </button>
-
+        <button
+          type="button"
+          className="auth-link-button"
+          onClick={() =>
+            router.push("/login")
+          }
+        >
+          ログイン
+        </button>
+      </div>
     </main>
-
   );
-
 }

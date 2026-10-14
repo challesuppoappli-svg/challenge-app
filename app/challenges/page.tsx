@@ -191,64 +191,63 @@ export default function ChallengesPage() {
               goal.targetDate
             );
 
-          return (
-            <button
-              key={goal.id}
-              type="button"
-              className="challenge-list-card"
-              onClick={() =>
-                router.push(
-                  `/challenges/${goal.id}`
-                )
-              }
-            >
-              <div className="challenge-list-header">
-                <h2>{goal.title}</h2>
+        return (
 
-                <span className="badge">
-                  {
-                  categoryLabels [
-                    goal.category
-                  ] ?? goal.category 
-                }
-                </span>
-              </div>
+  <button
+    key={goal.id}
+    type="button"
+    className="challenge-list-card"
+    onClick={() =>
+      router.push(
+        `/challenges/${goal.id}`
+      )
+    }
+  >
+    <div className="challenge-list-header">
+      <h2>{goal.title}</h2>
 
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{
-                    width: `${goal.progress}%`,
-                  }}
-                />
-              </div>
+      <span className="badge">
+        {categoryLabels[
+          goal.category
+        ] ?? goal.category}
+      </span>
+    </div>
 
-              <div className="progress-meta">
-                <span>
-                  {goal.completedTasks} /{" "}
-                  {goal.totalTasks} Task完了
-                </span>
+    <div className="progress-bar">
+      <div
+        className="progress-fill"
+        style={{
+          width: `${goal.progress}%`,
+        }}
+      />
+    </div>
 
-                <span>
-                  {goal.progress}%
-                </span>
-              </div>
+    <div className="progress-meta">
+      <span>
+        {goal.completedTasks} /{" "}
+        {goal.totalTasks} Task完了
+      </span>
 
-              <div className="progress-meta">
-                <span>
-                  {goal.status === "active"
-                    ? "進行中"
-                    : goal.status}
-                </span>
+      <span>
+        {goal.progress}%
+      </span>
+    </div>
 
-                {remainingDays !== null && (
-                  <span>
-                    残り{remainingDays}日
-                  </span>
-                )}
-              </div>
-            </button>
-          );
+    <div className="progress-meta">
+      <span>
+        {goal.status === "active"
+          ? "進行中"
+          : goal.status}
+      </span>
+
+      {remainingDays !== null && (
+        <span>
+          残り{remainingDays}日
+        </span>
+      )}
+    </div>
+  </button>
+);
         })}
       </div>
 

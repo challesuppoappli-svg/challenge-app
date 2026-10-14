@@ -1,9 +1,7 @@
 "use client";
 
-
 import { createElement } from "react";
 import Link from "next/link";
-
 
 export default function BottomNav() {
   return createElement(
@@ -19,7 +17,13 @@ export default function BottomNav() {
     createElement(
       Link,
       { href: "/challenges" },
-      "Challenges"
+     "Goals"
+    ),
+
+    createElement(
+      Link,
+      { href: "/roadmap" },
+      "Roadmap"
     ),
 
     createElement(

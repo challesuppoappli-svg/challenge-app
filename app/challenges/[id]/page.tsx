@@ -30,6 +30,7 @@ type Goal = {
 type Task = {
   id: string;
   goal_id: string;
+  milestone_id: string | null;
   title: string;
   description: string | null;
   due_date: string;
@@ -82,6 +83,7 @@ export default function ChallengeDetailPage() {
       .select(`
         id,
         goal_id,
+        milestone_id,
         title,
         description,
         due_date,
@@ -99,24 +101,38 @@ export default function ChallengeDetailPage() {
         ascending: false,
       });
 
-
     if (tasksError) {
-      console.error(
-        "Task取得エラー:",
-        tasksError
-      );
+  const taskErrorDetails = {
+    code: tasksError.code,
+    message: tasksError.message,
+    details: tasksError.details,
+    hint: tasksError.hint,
+  };
 
+  console.error(
+    "Task取得エラー詳細:",
+    JSON.stringify(
+      taskErrorDetails,
+      null,
+      2
+    )
+  );
 
-      setTaskMessage(
-        `Task取得エラー: ${tasksError.message}`
-      );
+  setTaskMessage(
+    [
+      `code: ${tasksError.code}`,
+      `message: ${tasksError.message}`,
+      `details: ${tasksError.details ?? "なし"}`,
+      `hint: ${tasksError.hint ?? "なし"}`,
+    ].join(" / ")
+  );
 
-      return;
-    }
+  return;
+}
 
 
     setTasks(
-      (tasksData ?? []) as Task[]
+      (tasksData ?? []) as unknown as Task[]
     );
   };
 
@@ -344,15 +360,14 @@ setSelectedGoalId(
     (task) => task.id === taskId
   );
 
-
   if (!selectedTask) {
     return;
   }
 
-
   const nextCompleted =
     !selectedTask.is_completed;
 
+  setTaskMessage("");
 
   const { error: updateError } =
     await supabase
@@ -362,22 +377,18 @@ setSelectedGoalId(
       })
       .eq("id", taskId);
 
-
   if (updateError) {
     console.error(
       "Task更新エラー:",
       updateError
     );
 
-
     setTaskMessage(
       `Task更新エラー: ${updateError.message}`
     );
 
-
     return;
   }
-
 
   if (nextCompleted) {
     const { error: completionError } =
@@ -389,18 +400,23 @@ setSelectedGoalId(
             new Date().toISOString(),
         });
 
-
     if (completionError) {
       console.error(
         "完了履歴保存エラー:",
         completionError
       );
 
+      await supabase
+        .from("tasks")
+        .update({
+          is_completed:
+            selectedTask.is_completed,
+        })
+        .eq("id", taskId);
 
       setTaskMessage(
         `完了履歴保存エラー: ${completionError.message}`
       );
-
 
       return;
     }
@@ -411,22 +427,27 @@ setSelectedGoalId(
         .delete()
         .eq("task_id", taskId);
 
-
     if (deleteError) {
       console.error(
         "完了履歴削除エラー:",
         deleteError
       );
 
+      await supabase
+        .from("tasks")
+        .update({
+          is_completed:
+            selectedTask.is_completed,
+        })
+        .eq("id", taskId);
+
       setTaskMessage(
         `完了履歴削除エラー: ${deleteError.message}`
       );
 
-
       return;
     }
   }
-
 
   setTasks((currentTasks) =>
     currentTasks.map((task) =>
@@ -439,11 +460,81 @@ setSelectedGoalId(
     )
   );
 
+  let milestoneMessage = "";
+
+  if (selectedTask.milestone_id) {
+    const {
+      data: milestoneTasks,
+      error: milestoneTasksError,
+    } = await supabase
+      .from("tasks")
+      .select(`
+        id,
+        is_completed
+      `)
+      .eq(
+        "milestone_id",
+        selectedTask.milestone_id
+      );
+
+    if (milestoneTasksError) {
+      console.error(
+        "Milestone関連Task取得エラー:",
+        milestoneTasksError
+      );
+
+      setTaskMessage(
+        `関連Task取得エラー: ${milestoneTasksError.message}`
+      );
+
+      return;
+    }
+
+    const hasRelatedTasks =
+      (milestoneTasks ?? []).length > 0;
+
+    const areAllTasksCompleted =
+      hasRelatedTasks &&
+      (milestoneTasks ?? []).every(
+        (task) => task.is_completed
+      );
+
+    const {
+      error: milestoneUpdateError,
+    } = await supabase
+      .from("milestones")
+      .update({
+        is_completed:
+          areAllTasksCompleted,
+      })
+      .eq(
+        "id",
+        selectedTask.milestone_id
+      );
+
+    if (milestoneUpdateError) {
+      console.error(
+        "Milestone自動更新エラー:",
+        milestoneUpdateError
+      );
+
+      setTaskMessage(
+        `Milestone更新エラー: ${milestoneUpdateError.message}`
+      );
+
+      return;
+    }
+
+    milestoneMessage =
+      areAllTasksCompleted
+        ? " 関連するMilestoneも完了しました。"
+        : "";
+  }
 
   setTaskMessage(
     nextCompleted
-      ? "Taskを完了しました。"
-      : "Taskを未完了に戻しました。"
+      ? `Taskを完了しました。${milestoneMessage}`
+      : "Taskを未完了に戻しました。Milestoneも未完了へ更新しました。"
   );
 };
 
@@ -980,7 +1071,11 @@ const handleReflectionSubmit = async (
                 <small>{task.due_date}</small>
               </span>
 
-              <div className="task-menu-wrapper">
+              <div className="task-menu-wrapper"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+              >
                 <button
                   type="button"
                   className="task-menu-button"
