@@ -4,6 +4,8 @@
 
 import {
 
+  useCallback,
+
   useEffect,
 
   useState,
@@ -40,6 +42,21 @@ type MilestoneData = {
 
 };
 
+type MilestoneTask = {
+
+  id: string;
+
+  milestone_id: string | null;
+
+  title: string;
+
+  description: string | null;
+
+  due_date: string;
+
+  is_completed: boolean;
+
+};
 
 
 type RoadmapData = {
@@ -58,121 +75,92 @@ type GoalData = {
 
 
 
-type GeneratedTaskDraft = {
+type GeneratedTask = {
 
   title: string;
 
   description: string;
 
-  dueDateOffset: number;
+  due_date: string;
 
 };
 
+const isValidIsoDate = (value: string) => {
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+
+    return false;
+
+  }
 
 
-const formatDate = (date: Date) => {
+  const date = new Date(`${value}T00:00:00.000Z`);
 
-  const year = date.getFullYear();
+  return (
 
+    !Number.isNaN(date.getTime()) &&
 
-
-  const month = String(
-
-    date.getMonth() + 1
-
-  ).padStart(2, "0");
-
-
-
-  const day = String(
-
-    date.getDate()
-
-  ).padStart(2, "0");
-
-
-
-  return `${year}-${month}-${day}`;
-
-};
-
-
-
-const createDueDate = (
-
-  offsetDays: number
-
-) => {
-
-  const date = new Date();
-
-
-
-  date.setHours(12, 0, 0, 0);
-
-
-
-  date.setDate(
-
-    date.getDate() + offsetDays
+    date.toISOString().slice(0, 10) === value
 
   );
 
-
-
-  return formatDate(date);
-
 };
 
 
+const isGeneratedTaskResponse = (
 
-const createTaskDrafts = (
+  value: unknown
 
-  milestone: MilestoneData
+): value is { tasks: GeneratedTask[] } => {
 
-): GeneratedTaskDraft[] => {
+  if (
 
-  return [
+    typeof value !== "object" ||
 
-    {
+    value === null ||
 
-      title: `${milestone.title}の現状を整理する`,
+    !("tasks" in value) ||
 
-      description:
+    !Array.isArray(value.tasks) ||
 
-        "現在できていること、足りないこと、必要な情報を整理します。",
+    value.tasks.length < 1 ||
 
-      dueDateOffset: 0,
+    value.tasks.length > 20
 
-    },
+  ) {
 
-    {
+    return false;
 
-      title: `${milestone.title}を実行する`,
+  }
 
-      description:
 
-        milestone.description ??
+  return value.tasks.every(
 
-        "このMilestoneの中心となる行動を実行します。",
+    (task: unknown) =>
 
-      dueDateOffset: 3,
+      typeof task === "object" &&
 
-    },
+      task !== null &&
 
-    {
+      "title" in task &&
 
-      title: `${milestone.title}の結果を振り返る`,
+      typeof task.title === "string" &&
 
-      description:
+      task.title.trim().length > 0 &&
 
-        "実行結果を確認し、次のステップに向けた改善点を整理します。",
+      "description" in task &&
 
-      dueDateOffset: 7,
+      typeof task.description === "string" &&
 
-    },
+      task.description.trim().length > 0 &&
 
-  ];
+      "due_date" in task &&
+
+      typeof task.due_date === "string" &&
+
+      isValidIsoDate(task.due_date)
+
+  );
 
 };
 
@@ -224,11 +212,11 @@ export default function MilestoneDetailPage() {
 
     useState(false);
 
-
-
   const [generatedTaskCount, setGeneratedTaskCount] =
 
     useState(0);
+
+
 
   const [challengeId, setChallengeId] =
 
@@ -240,6 +228,192 @@ export default function MilestoneDetailPage() {
 
     useState("");
 
+  const [milestoneTasks, setMilestoneTasks] =
+
+    useState<MilestoneTask[]>([]);
+
+  const [isLoadingTasks, setIsLoadingTasks] =
+
+    useState(true);
+
+  const [hasTaskLoadError, setHasTaskLoadError] =
+
+    useState(false);
+
+
+  const fetchMilestoneTasks = useCallback(
+
+    async (
+
+      taskMilestoneId: string | null
+
+    ): Promise<boolean> => {
+
+      if (!taskMilestoneId) {
+
+        setMilestoneTasks([]);
+
+        setIsLoadingTasks(false);
+
+        setHasTaskLoadError(false);
+
+        return false;
+
+      }
+
+
+      setIsLoadingTasks(true);
+
+      setHasTaskLoadError(false);
+
+
+      try {
+
+        const {
+
+          data,
+
+          error,
+
+        } = await supabase
+
+          .from("tasks")
+
+          .select(`
+
+            id,
+
+            milestone_id,
+
+            title,
+
+            description,
+
+            due_date,
+
+            is_completed
+
+          `)
+
+          .eq(
+
+            "milestone_id",
+
+            taskMilestoneId
+
+          )
+
+          .order("due_date", {
+
+            ascending: true,
+
+          });
+
+
+        if (error) {
+
+          console.error(
+
+            "Milestone Task取得エラー:",
+
+            error
+
+          );
+
+          setMessage(
+
+            `Task取得エラー: ${error.message}`
+
+          );
+
+          setHasTaskLoadError(true);
+
+          return false;
+
+        }
+
+
+        const tasks =
+
+          (data ?? []) as MilestoneTask[];
+
+
+        setMilestoneTasks(tasks);
+
+        setHasTaskLoadError(false);
+
+        return true;
+
+      } catch (error) {
+
+        console.error(
+
+          "Milestone Task取得エラー:",
+
+          error
+
+        );
+
+        setMessage(
+
+          `Task取得エラー: ${
+
+            error instanceof Error
+
+              ? error.message
+
+              : "Taskを取得できませんでした。"
+
+          }`
+
+        );
+
+        setHasTaskLoadError(true);
+
+        return false;
+
+      } finally {
+
+        setIsLoadingTasks(false);
+
+      }
+
+    },
+
+    []
+
+  );
+
+
+  const totalTaskCount =
+
+    milestoneTasks.length;
+
+
+  const completedTaskCount =
+
+    milestoneTasks.filter(
+
+      (task) => task.is_completed
+
+    ).length;
+
+
+  const taskProgress =
+
+    totalTaskCount === 0
+
+      ? 0
+
+      : Math.round(
+
+          (completedTaskCount /
+
+            totalTaskCount) *
+
+            100
+
+        );
 
 
   useEffect(() => {
@@ -372,9 +546,13 @@ export default function MilestoneDetailPage() {
 
         data as MilestoneData;
 
-
-
       setMilestone(resolvedMilestone);
+
+      await fetchMilestoneTasks(
+
+        resolvedMilestone.id
+
+      );
 
       const {
 
@@ -482,8 +660,6 @@ if (roadmapError) {
 
         const taskCount = count ?? 0;
 
-
-
         setGeneratedTaskCount(taskCount);
 
         setHasGeneratedTasks(
@@ -504,7 +680,15 @@ if (roadmapError) {
 
     loadMilestone();
 
-  }, [milestoneId, router]);
+  }, [
+
+    fetchMilestoneTasks,
+
+    milestoneId,
+
+    router,
+
+  ]);
 
 
 
@@ -651,10 +835,12 @@ if (roadmapError) {
 
 
     setIsGeneratingTasks(true);
-
+    setIsGeneratingTasks(true);
     setMessage("");
+    setMessage("");
+    let generationStage: "ai" | "save" = "ai";
 
-
+    try {
 
     const {
 
@@ -667,6 +853,35 @@ if (roadmapError) {
 
 
     if (userError || !user) {
+
+      router.push("/login");
+
+      return;
+
+    }
+
+    const {
+
+      data: { session },
+
+      error: sessionError,
+
+    } = await supabase.auth.getSession();
+
+
+    if (sessionError || !session?.access_token) {
+
+      if (sessionError) {
+
+        console.error(
+
+          "認証セッション取得エラー:",
+
+          sessionError
+
+        );
+
+      }
 
       router.push("/login");
 
@@ -754,6 +969,149 @@ if (roadmapError) {
 
     }
 
+    let aiResponse: Response;
+
+    try {
+
+      aiResponse = await fetch(
+
+        "/api/roadmap/generate-tasks",
+
+        {
+
+          method: "POST",
+
+          headers: {
+
+            "Content-Type": "application/json",
+
+            Authorization: `Bearer ${session.access_token}`,
+
+          },
+
+          body: JSON.stringify({
+
+            milestoneId: milestone.id,
+
+          }),
+
+        }
+
+      );
+
+    } catch (error) {
+
+      console.error(
+
+        "AI Task生成API通信エラー:",
+
+        error
+
+      );
+
+      setMessage("AI Task生成に失敗しました。");
+
+      return;
+
+    }
+
+
+    let aiResult: unknown;
+
+    try {
+
+      aiResult = await aiResponse.json();
+
+    } catch (error) {
+
+      console.error(
+
+        "AI Task生成APIレスポンス解析エラー:",
+
+        error
+
+      );
+
+      setMessage("生成結果の形式が正しくありません。");
+
+      return;
+
+    }
+
+
+    if (aiResponse.status === 401) {
+
+      router.push("/login");
+
+      return;
+
+    }
+
+
+    if (!aiResponse.ok) {
+
+      const apiError =
+
+        typeof aiResult === "object" &&
+
+        aiResult !== null &&
+
+        "error" in aiResult &&
+
+        typeof aiResult.error === "string"
+
+          ? aiResult.error
+
+          : "";
+
+
+      console.error(
+
+        "AI Task生成APIエラー:",
+
+        aiResponse.status,
+
+        apiError
+
+      );
+
+      setMessage(
+
+        aiResponse.status === 503
+
+          ? "AIの設定を確認してください。"
+
+          : aiResponse.status >= 500
+
+            ? "AI Task生成に失敗しました。"
+
+            : apiError || "Taskを作成できませんでした。"
+
+      );
+
+      return;
+
+    }
+
+
+    if (!isGeneratedTaskResponse(aiResult)) {
+
+      console.error(
+
+        "AI Task生成APIのレスポンス形式が不正です。"
+
+      );
+
+      setMessage("生成結果の形式が正しくありません。");
+
+      return;
+
+    }
+
+
+    const generatedTasks = aiResult.tasks;
+
+    generationStage = "save";
 
 
     const {
@@ -1036,31 +1394,19 @@ if (roadmapError) {
 
 
 
-    const taskDrafts =
+    const taskRows = generatedTasks.map(
 
-      createTaskDrafts(milestone);
-
-
-
-    const taskRows = taskDrafts.map(
-
-      (taskDraft) => ({
+      (task) => ({
 
         goal_id: goalId,
 
         milestone_id: milestone.id,
 
-        title: taskDraft.title,
+        title: task.title,
 
-        description:
+        description: task.description,
 
-          taskDraft.description,
-
-        due_date: createDueDate(
-
-          taskDraft.dueDateOffset
-
-        ),
+        due_date: task.due_date,
 
         is_completed: false,
 
@@ -1096,7 +1442,7 @@ if (roadmapError) {
 
       setMessage(
 
-        `Task生成エラー: ${taskInsertError.message}`
+        "Taskの保存に失敗しました。"
 
       );
 
@@ -1110,25 +1456,52 @@ if (roadmapError) {
 
 
 
+    setGeneratedTaskCount(taskRows.length);
+
     setHasGeneratedTasks(true);
 
-    setGeneratedTaskCount(
+    const tasksLoaded =
 
-      taskRows.length
+      await fetchMilestoneTasks(
 
-    );
+        milestone.id
 
-
-
-    setMessage(
-
-      `${taskRows.length}件のTaskを作成しました。`
-
-    );
+      );
 
 
+    if (tasksLoaded) {
 
-    setIsGeneratingTasks(false);
+      setMessage(
+
+        `${taskRows.length}件のTaskを作成しました。`
+
+      );
+
+    }
+
+
+
+    } catch (error) {
+
+      console.error(
+
+        "Milestone Task生成処理エラー:",
+
+        error
+
+      );
+
+      setMessage(
+        generationStage === "save"
+          ? "Taskの保存に失敗しました。"
+          : "AI Task生成に失敗しました。"
+      );
+
+    } finally {
+
+      setIsGeneratingTasks(false);
+
+    }
 
   };
 
@@ -1334,114 +1707,163 @@ if (roadmapError) {
 
 
 
-        <section className="milestone-task-generation-card">
+        <section className="milestone-task-progress-card">
+          <div className="milestone-task-progress-header">
+            <p className="milestone-detail-label">
+              TASK PROGRESS
+            </p>
+            <span className="milestone-task-progress-count">
+              {completedTaskCount} / {totalTaskCount}
+            </span>
+          </div>
 
-          <p className="milestone-detail-label">
+          <div
+            className="milestone-task-progress-bar"
+            role="progressbar"
+            aria-label="Task進捗"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={taskProgress}
+          >
+            <div
+              className="milestone-task-progress-fill"
+              style={{
+                width: `${taskProgress}%`,
+              }}
+            />
+          </div>
 
-            TASK SUPPORT
-
+          <p className="milestone-task-progress-percent">
+            {taskProgress}%
           </p>
+        </section>
 
-
-
-          <h2 className="milestone-task-generation-title">
-
-            このステップのTask
-
+        <section className="milestone-task-list-card">
+          <h2 className="milestone-detail-label">
+            TASKS
           </h2>
 
+          {isLoadingTasks ? (
+            <p className="milestone-task-loading">
+              読み込み中...
+            </p>
+          ) : hasTaskLoadError ? (
+            <p className="milestone-task-loading">
+              Taskを読み込めませんでした。
+            </p>
+          ) : totalTaskCount === 0 ? (
+            <p className="milestone-task-empty">
+              このMilestoneにはまだTaskがありません。
+            </p>
+          ) : (
+            <ul className="milestone-task-list">
+              {milestoneTasks.map((task) => (
+                <li
+                  key={task.id}
+                  className={`milestone-task-item ${
+                    task.is_completed
+                      ? "milestone-task-item-completed"
+                      : ""
+                  }`}
+                >
+                  <span
+                    className="milestone-task-check"
+                    aria-label={
+                      task.is_completed
+                        ? "完了"
+                        : "未完了"
+                    }
+                  >
+                    {task.is_completed ? "✓" : ""}
+                  </span>
 
+                  <div className="milestone-task-content">
+                    <p
+                      className={`milestone-task-title ${
+                        task.is_completed
+                          ? "milestone-task-title-completed"
+                          : ""
+                      }`}
+                    >
+                      {task.title}
+                    </p>
 
-          <p className="milestone-task-generation-description">
+                    {task.description && (
+                      <p className="milestone-task-description">
+                        {task.description}
+                      </p>
+                    )}
 
-            Milestoneを進めるためのTaskを
+                    <p className="milestone-task-date">
+                      {task.is_completed
+                        ? "完了"
+                        : "未完了"}
+                      {" ・ "}
+                      期限: {task.due_date}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-            3件作成します。
-
+        <section className="milestone-task-generation-card">
+          <p className="milestone-detail-label">
+            TASK SUPPORT
           </p>
 
+          <h2 className="milestone-task-generation-title">
+            このステップのTask
+          </h2>
 
+          <p className="milestone-task-generation-description">
+            AIが期間と難易度を考慮して、必要なTaskを作成します。
+          </p>
 
-         {hasGeneratedTasks && (
+          {hasGeneratedTasks && (
+            <p className="milestone-task-generated-message">
+              {hasTaskLoadError
+                ? generatedTaskCount
+                : totalTaskCount}
+              件のTaskを作成済みです。
+            </p>
+          )}
 
-  <p className="milestone-task-generated-message">
+          <button
+            type="button"
+            className="btn-primary milestone-task-generate-button"
+            disabled={
+              isGeneratingTasks ||
+              hasGeneratedTasks
+            }
+            onClick={handleGenerateTasks}
+          >
+            {isGeneratingTasks
+              ? "AIがTaskを作成中..."
+              : hasGeneratedTasks
+                ? "Task作成済み"
+                : "AIでTaskを作成する"}
+          </button>
 
-    {generatedTaskCount}件のTaskを作成済みです。
+          {hasGeneratedTasks && (
+            <button
+              type="button"
+              className="milestone-task-view-button"
+              disabled={!challengeId}
+              onClick={() => {
+                if (!challengeId) {
+                  return;
+                }
 
-  </p>
-
-)}
-
-
-
-<button
-
-  type="button"
-
-  className="btn-primary milestone-task-generate-button"
-
-  disabled={
-
-    isGeneratingTasks ||
-
-    hasGeneratedTasks
-
-  }
-
-  onClick={handleGenerateTasks}
-
->
-
-  {isGeneratingTasks
-
-    ? "Task作成中..."
-
-    : hasGeneratedTasks
-
-      ? "Task作成済み"
-
-      : "Taskを自動作成する"}
-
-</button>
-
-
-
-{hasGeneratedTasks && (
-
-  <button
-
-  type="button"
-
-  className="milestone-task-view-button"
-
-  disabled={!challengeId}
-
-  onClick={() => {
-
-    if (!challengeId) {
-
-      return;
-
-    }
-
-
-
-    router.push(
-
-      `/challenges/${challengeId}`
-
-    );
-
-  }}
-
->
-
-  Goal詳細でTaskを確認する
-
-</button>
-
-)}
-
+                router.push(
+                  `/challenges/${challengeId}`
+                );
+              }}
+            >
+              Goal詳細でTaskを確認する
+            </button>
+          )}
         </section>
 
 
@@ -1468,6 +1890,12 @@ if (roadmapError) {
 
         )}
 
+        {totalTaskCount > 0 &&
+          completedTaskCount < totalTaskCount && (
+            <p className="milestone-task-warning">
+              未完了のTaskが残っています。
+            </p>
+          )}
 
 
         <button
